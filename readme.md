@@ -1,5 +1,19 @@
 # Code Challenge: Categorização
 
+# Categorization Challenge
+
+Sistema de categorização de produtos para comparador de preços.
+
+## Como executar
+
+1. Instale as dependências:
+```bash
+npm install
+
+npm start
+
+---
+
 ## Contexto
 Você está desenvolvendo um sistema para um comparador de preços que precisa identificar quando diferentes supermercados vendem o mesmo produto, mesmo quando os nomes têm pequenas variações.
 

@@ -1,0 +1,19 @@
+{
+  "name": "challenge01",
+  "version": "1.0.0",
+  "description": "Você está desenvolvendo um sistema para um comparador de preços que precisa identificar quando diferentes supermercados vendem o mesmo produto, mesmo quando os nomes têm pequenas variações.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/categorizeProducts.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jao-Viquitor/challenge01.git"
+  },
+  "author": "Jão-Viquitor",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Jao-Viquitor/challenge01/issues"
+  },
+  "homepage": "https://github.com/Jao-Viquitor/challenge01#readme"
+}
