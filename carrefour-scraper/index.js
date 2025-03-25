@@ -1,4 +1,3 @@
-// index.js
 const puppeteer = require('puppeteer');
 const fs = require('fs').promises;
 
@@ -9,7 +8,7 @@ async function delay(ms) {
 async function scrapeCarrefourDrinks() {
     try {
         const browser = await puppeteer.launch({
-            headless: false,
+            headless: true,
             args: ['--no-sandbox'],
             timeout: 60000
         });
@@ -143,33 +142,85 @@ async function scrapeCarrefourDrinks() {
             });
         };
 
+        const getCurrentProductsHash = async () => {
+            const currentProducts = await extractProducts();
+            return currentProducts.map(p => p.name).join('|');
+        };
+
         await page.waitForSelector('ul.grid.grid-cols-2.xl\\:grid-cols-5.md\\:grid-cols-4 > li', { timeout: 60000 });
-        const scrapedProducts = await extractProducts();
-        products.push(...scrapedProducts);
+        const firstPageProducts = await extractProducts();
+        products.push(...firstPageProducts);
+        console.log('Produtos da primeira página coletados:', firstPageProducts.length);
 
         let hasNextPage = true;
+        let pageCount = 1;
+
         while (hasNextPage) {
             try {
+                console.log(`Processando página ${pageCount}`);
                 await page.waitForSelector('ul.grid.grid-cols-2.xl\\:grid-cols-5.md\\:grid-cols-4 > li', { timeout: 60000 });
-                const scrapedProducts = await extractProducts();
-                products.push(...scrapedProducts);
 
-                const nextPageButton = await page.$('link[rel="next"]');
-                if (nextPageButton) {
-                    console.log('Botão de próxima página encontrado, clicando...');
-                    await Promise.all([
-                        nextPageButton.click(),
-                        page.waitForNavigation({ waitUntil: 'networkidle2' })
-                    ]);
-                } else {
-                    console.log('Nenhum botão de próxima página encontrado.');
+                const beforeHash = await getCurrentProductsHash();
+
+                const navigationSuccess = await page.evaluate((currentPage) => {
+                    const nextButton = document.querySelector('div.rotate-180:last-child a button');
+                    if (nextButton && nextButton.offsetParent !== null && !nextButton.disabled) {
+                        console.log('Clicando no botão de próxima página');
+                        nextButton.click();
+                        return true;
+                    }
+
+                    console.log('Botão de próxima página não disponível, tentando número da próxima página');
+                    const pageButtons = document.querySelectorAll('div.border-\\[#E81E26\\] a button');
+                    const nextPageNumber = currentPage + 1;
+
+                    for (const button of pageButtons) {
+                        if (parseInt(button.textContent.trim()) === nextPageNumber && !button.disabled) {
+                            console.log(`Clicando no botão da página ${nextPageNumber}`);
+                            button.click();
+                            return true;
+                        }
+                    }
+
+                    console.log('Nenhum botão de próxima página clicável encontrado');
+                    return false;
+                }, pageCount);
+
+                if (!navigationSuccess) {
+                    console.log('Nenhum botão disponível para navegação, encerrando...');
                     hasNextPage = false;
+                    break;
                 }
+
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                let attempts = 0;
+                const maxAttempts = 12;
+                let afterHash = await getCurrentProductsHash();
+
+                while (beforeHash === afterHash && attempts < maxAttempts) {
+                    console.log(`Aguardando mudança nos produtos (tentativa ${attempts + 1}/${maxAttempts})`);
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    afterHash = await getCurrentProductsHash();
+                    attempts++;
+                }
+
+                if (beforeHash === afterHash) {
+                    console.log('Nenhuma mudança detectada nos produtos após clique, encerrando...');
+                    hasNextPage = false;
+                } else {
+                    const newProducts = await extractProducts();
+                    products.push(...newProducts);
+                    console.log(`Produtos da página ${pageCount + 1} coletados: ${newProducts.length}`);
+                    pageCount++;
+                }
+
             } catch (error) {
                 console.log('Erro durante a navegação para a próxima página:', error.message);
                 hasNextPage = false;
             }
         }
+
+        console.log('Total de produtos coletados:', products.length);
 
         await fs.writeFile(
             'output.json',
