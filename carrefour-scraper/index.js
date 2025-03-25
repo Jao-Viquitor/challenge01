@@ -66,18 +66,14 @@ async function scrapeCarrefourDrinks() {
             throw new Error('Elemento não encontrado com o seletor: ' + targetSelector);
         }
 
-        const isClickable = await page.evaluate((selector) => {
+        await page.evaluate((selector) => {
             const el = document.querySelector(selector);
-            return el && (el.onclick || el.tagName === 'BUTTON' || el.tagName === 'A' || el.closest('a, button'));
+            if (el) {
+                el.click();
+            }
         }, targetSelector);
-        console.log('Elemento é clicável?', isClickable);
 
-        await page.click(targetSelector);
         await delay(2000);
-
-        const popupSelector = '#headlessui-tabs-panel-\\:r1g\\:';
-        const popupStillVisible = await page.$(popupSelector) !== null;
-        console.log('Popup ainda visível após o clique?', popupStillVisible);
 
         console.log('Elemento clicado com sucesso.');
 
